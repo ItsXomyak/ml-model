@@ -1,21 +1,21 @@
-"""Exploratory Data Analysis (EDA) — описательный и корреляционный анализ датасета.
+"""Exploratory Data Analysis — описательная и корреляционная статистика.
 
-Производит:
-    plots/16_numeric_histograms.png   — гистограммы всех числовых признаков
-    plots/17_categorical_counts.png   — частоты категориальных признаков
-    plots/18_spearman_correlation.png — Spearman correlation heatmap (нелинейные связи)
-    plots/19_scatter_matrix.png       — попарные scatter ключевых признаков с price
-    plots/20_outliers_boxplots.png    — boxplots для детекции выбросов
-    plots/21_price_vs_features.png    — связь цены с каждым числовым признаком
+Производит CSV/JSON в plots/ (без графиков — основные графики делает make_plots.py):
+    plots/descriptive_stats.csv   — count, mean, std, min/max, квантили,
+                                    skewness, kurtosis, IQR, CV, range
+    plots/categorical_counts.csv  — count + percent для категориальных
+    plots/correlation_matrix.csv  — Pearson + Spearman корреляции
+    plots/eda_summary.json        — краткая JSON-сводка
 
-    plots/descriptive_stats.csv       — описательная статистика (count, mean, std, min, max, квантили)
-    plots/categorical_counts.csv      — count + % для категориальных
-    plots/correlation_matrix.csv      — Pearson и Spearman корреляции
+В stdout выводит:
+    - размеры датасета, пропуски, дубликаты
+    - таблицу описательной статистики
+    - распределение категориальных
+    - топ корреляций с price
+    - подсчёт outliers по IQR
 
 Запуск:
     python eda.py
-
-Перед запуском: python generate_data.py
 """
 
 import json
@@ -29,10 +29,6 @@ if hasattr(sys.stdout, "reconfigure"):
 import numpy as np
 import pandas as pd
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-
 
 ROOT      = Path(__file__).parent
 DATA_PATH = ROOT / "data" / "apartments_astana.csv"
@@ -44,241 +40,42 @@ CATEGORICAL_FEATURES = ["district", "material", "renovation"]
 TARGET = "price"
 
 
-def setup_style() -> None:
-    plt.rcParams.update({
-        "figure.facecolor": "white",
-        "axes.facecolor":   "white",
-        "axes.grid":        True,
-        "grid.alpha":       0.3,
-        "grid.linestyle":   "--",
-        "axes.spines.top":  False,
-        "axes.spines.right": False,
-        "font.family":      "DejaVu Sans",
-        "font.size":        10,
-    })
-
-
-def save(fig: plt.Figure, name: str) -> None:
-    path = PLOTS_DIR / name
-    fig.tight_layout()
-    fig.savefig(path, dpi=120, bbox_inches="tight")
-    plt.close(fig)
-    print(f"  ✓ {path.name}")
-
-
-# ---------- Описательная статистика ----------
 def descriptive_stats(df: pd.DataFrame) -> pd.DataFrame:
-    """Расширенная describe(): + skewness, kurtosis, missing %."""
     numeric = df.select_dtypes(include=[np.number])
-    stats = numeric.describe().T  # count, mean, std, min, 25%, 50%, 75%, max
-    stats["skewness"] = numeric.skew()
-    stats["kurtosis"] = numeric.kurtosis()
-    stats["missing"]  = numeric.isna().sum()
+    stats = numeric.describe().T
+    stats["skewness"]    = numeric.skew()
+    stats["kurtosis"]    = numeric.kurtosis()
+    stats["missing"]     = numeric.isna().sum()
     stats["missing_pct"] = (numeric.isna().sum() / len(numeric) * 100).round(2)
-    stats["unique"]    = numeric.nunique()
-    stats["range"]     = numeric.max() - numeric.min()
-    stats["iqr"]       = numeric.quantile(0.75) - numeric.quantile(0.25)
-    stats["cv"]        = (numeric.std() / numeric.mean()).round(3)  # coefficient of variation
-
-    # Округление для читабельности
-    stats = stats.round(3)
-    return stats
+    stats["unique"]      = numeric.nunique()
+    stats["range"]       = numeric.max() - numeric.min()
+    stats["iqr"]         = numeric.quantile(0.75) - numeric.quantile(0.25)
+    stats["cv"]          = (numeric.std() / numeric.mean()).round(3)
+    return stats.round(3)
 
 
 def categorical_stats(df: pd.DataFrame) -> dict:
-    """Counts и процентное распределение для категориальных признаков."""
     out = {}
     for col in CATEGORICAL_FEATURES:
         counts = df[col].value_counts()
         pct = (counts / len(df) * 100).round(2)
-        result = pd.DataFrame({"count": counts, "percent": pct})
-        out[col] = result
+        out[col] = pd.DataFrame({"count": counts, "percent": pct})
     return out
 
 
-# ---------- 16. Гистограммы числовых признаков ----------
-def plot_numeric_histograms(df: pd.DataFrame) -> None:
-    n = len(NUMERIC_FEATURES)
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
-    axes = axes.flatten()
-
-    for i, col in enumerate(NUMERIC_FEATURES):
-        ax = axes[i]
-        ax.hist(df[col], bins=30, color="#3b82f6", alpha=0.75, edgecolor="white")
-        ax.axvline(df[col].mean(), color="#ef4444", lw=2, linestyle="--",
-                   label=f"Mean = {df[col].mean():.2f}")
-        ax.axvline(df[col].median(), color="#f59e0b", lw=2, linestyle=":",
-                   label=f"Median = {df[col].median():.2f}")
-        ax.set_xlabel(col)
-        ax.set_ylabel("Частота")
-        ax.set_title(f"{col} (skew={df[col].skew():.2f})")
-        ax.legend(fontsize=8)
-
-    fig.suptitle("Распределения числовых признаков",
-                 fontsize=13, fontweight="bold", y=1.00)
-    save(fig, "16_numeric_histograms.png")
-
-
-# ---------- 17. Counts категориальных признаков ----------
-def plot_categorical_counts(df: pd.DataFrame) -> None:
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-
-    for ax, col in zip(axes, CATEGORICAL_FEATURES):
-        counts = df[col].value_counts().sort_values()
-        bars = ax.barh(counts.index, counts.values, color="#10b981", alpha=0.85)
-        ax.set_xlabel("Количество квартир")
-        ax.set_title(f"{col} (n_unique={df[col].nunique()})")
-        # Аннотации с %
-        total = counts.sum()
-        for bar, val in zip(bars, counts.values):
-            pct = val / total * 100
-            ax.text(val + total * 0.01, bar.get_y() + bar.get_height() / 2,
-                    f"{val} ({pct:.1f}%)", va="center", fontsize=9)
-        ax.set_xlim(0, counts.max() * 1.18)
-
-    fig.suptitle("Распределение категориальных признаков",
-                 fontsize=13, fontweight="bold", y=1.02)
-    save(fig, "17_categorical_counts.png")
-
-
-# ---------- 18. Spearman correlation ----------
-def plot_spearman_correlation(df: pd.DataFrame) -> pd.DataFrame:
-    cols = NUMERIC_FEATURES + [TARGET]
-    corr = df[cols].corr(method="spearman")
-
-    fig, ax = plt.subplots(figsize=(8, 7))
-    im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1, aspect="auto")
-    ax.set_xticks(range(len(cols)))
-    ax.set_yticks(range(len(cols)))
-    ax.set_xticklabels(cols, rotation=45, ha="right")
-    ax.set_yticklabels(cols)
-    ax.grid(False)
-
-    for i in range(len(cols)):
-        for j in range(len(cols)):
-            val = corr.iloc[i, j]
-            color = "white" if abs(val) > 0.5 else "black"
-            ax.text(j, i, f"{val:.2f}", ha="center", va="center",
-                    color=color, fontsize=9)
-
-    fig.colorbar(im, ax=ax, label="Spearman ρ")
-    ax.set_title("Spearman correlation (улавливает монотонные нелинейные связи)")
-    save(fig, "18_spearman_correlation.png")
-    return corr
-
-
-# ---------- 19. Scatter matrix ----------
-def plot_scatter_matrix(df: pd.DataFrame) -> None:
-    """Pairplot ключевых признаков (area, dist_to_center, year_built, price)."""
-    cols = ["area", "dist_to_center", "year_built", "price"]
-    n = len(cols)
-
-    fig, axes = plt.subplots(n, n, figsize=(13, 13))
-    for i, ci in enumerate(cols):
-        for j, cj in enumerate(cols):
-            ax = axes[i, j]
-            if i == j:
-                # Диагональ — гистограмма
-                ax.hist(df[ci], bins=25, color="#3b82f6", alpha=0.7, edgecolor="white")
-                ax.set_title(ci, fontsize=10, pad=5)
-                ax.tick_params(labelleft=False)
-            else:
-                # Off-diagonal — scatter с раскраской по price
-                sc = ax.scatter(df[cj], df[ci], c=df[TARGET], cmap="viridis",
-                                s=4, alpha=0.5)
-                ax.tick_params(labelsize=7)
-
-            if i == n - 1:
-                ax.set_xlabel(cj, fontsize=9)
-            else:
-                ax.set_xticklabels([])
-            if j == 0:
-                ax.set_ylabel(ci, fontsize=9)
-            else:
-                ax.set_yticklabels([])
-
-    fig.suptitle("Scatter matrix ключевых признаков (цвет = цена)",
-                 fontsize=13, fontweight="bold", y=0.995)
-    save(fig, "19_scatter_matrix.png")
-
-
-# ---------- 20. Outliers boxplots ----------
-def plot_outliers(df: pd.DataFrame) -> dict:
-    """Boxplots для всех числовых признаков + price. Подсчёт outliers по IQR."""
-    cols = NUMERIC_FEATURES + [TARGET]
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
-    axes = axes.flatten()
-
-    outliers_count = {}
-    for i, col in enumerate(cols):
-        ax = axes[i]
-        bp = ax.boxplot(df[col], vert=True, patch_artist=True,
-                        widths=0.5, showmeans=True,
-                        meanprops={"marker": "D", "markerfacecolor": "#ef4444",
-                                   "markeredgecolor": "white", "markersize": 7})
-        for patch in bp["boxes"]:
-            patch.set_facecolor("#3b82f6")
-            patch.set_alpha(0.65)
-
-        # Подсчёт outliers по IQR-методу
+def count_outliers_iqr(df: pd.DataFrame, columns: list) -> dict:
+    """Подсчёт выбросов по правилу IQR (>1.5·IQR от Q1/Q3)."""
+    out = {}
+    for col in columns:
         q1 = df[col].quantile(0.25)
         q3 = df[col].quantile(0.75)
         iqr = q3 - q1
-        lo = q1 - 1.5 * iqr
-        hi = q3 + 1.5 * iqr
-        n_out = ((df[col] < lo) | (df[col] > hi)).sum()
-        outliers_count[col] = int(n_out)
-
-        ax.set_title(f"{col}\nOutliers: {n_out} ({n_out/len(df)*100:.1f}%)",
-                     fontsize=10)
-        ax.set_xticks([])
-
-    # Скрываем последний пустой subplot
-    if len(cols) < len(axes):
-        axes[-1].axis("off")
-
-    fig.suptitle("Boxplots для детекции выбросов (IQR метод)",
-                 fontsize=13, fontweight="bold", y=1.00)
-    save(fig, "20_outliers_boxplots.png")
-    return outliers_count
+        n = ((df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)).sum()
+        out[col] = int(n)
+    return out
 
 
-# ---------- 21. Price vs each feature ----------
-def plot_price_vs_features(df: pd.DataFrame) -> None:
-    fig, axes = plt.subplots(2, 3, figsize=(15, 9))
-    axes = axes.flatten()
-
-    for i, col in enumerate(NUMERIC_FEATURES):
-        ax = axes[i]
-        ax.scatter(df[col], df[TARGET], alpha=0.4, s=10, color="#3b82f6")
-
-        # Линия тренда (полиномиальная 2-ой степени)
-        try:
-            z = np.polyfit(df[col], df[TARGET], 2)
-            xs = np.linspace(df[col].min(), df[col].max(), 100)
-            ax.plot(xs, np.polyval(z, xs), color="#ef4444", lw=2,
-                    label=f"Тренд (poly-2)")
-        except Exception:
-            pass
-
-        # Pearson и Spearman
-        pearson = df[col].corr(df[TARGET], method="pearson")
-        spearman = df[col].corr(df[TARGET], method="spearman")
-
-        ax.set_xlabel(col)
-        ax.set_ylabel("Цена (млн ₸)")
-        ax.set_title(f"{col} → price\nPearson: {pearson:.3f} | Spearman: {spearman:.3f}",
-                     fontsize=10)
-        ax.legend(fontsize=8)
-
-    fig.suptitle("Связь каждого числового признака с целевой переменной",
-                 fontsize=13, fontweight="bold", y=1.00)
-    save(fig, "21_price_vs_features.png")
-
-
-# ---------- main ----------
 def main() -> None:
-    setup_style()
     print("=" * 60)
     print("EDA — описательный и корреляционный анализ")
     print("=" * 60)
@@ -289,10 +86,10 @@ def main() -> None:
         )
 
     df = pd.read_csv(DATA_PATH)
-    print(f"\n[load] Загружено {len(df)} строк, {df.shape[1]} колонок")
-    print(f"[load] Колонки: {list(df.columns)}")
-    print(f"[load] Пропусков: {df.isna().sum().sum()} (всего)")
-    print(f"[load] Дубликатов: {df.duplicated().sum()}")
+    print(f"\n[load] Строк:        {len(df)}")
+    print(f"[load] Колонок:      {df.shape[1]} ({list(df.columns)})")
+    print(f"[load] Пропусков:    {df.isna().sum().sum()}")
+    print(f"[load] Дубликатов:   {df.duplicated().sum()}")
 
     # ----- Описательная статистика -----
     print("\n" + "─" * 60)
@@ -302,7 +99,7 @@ def main() -> None:
     print(stats[["count", "mean", "std", "min", "50%", "max",
                  "skewness", "kurtosis", "cv"]].to_string())
     stats.to_csv(PLOTS_DIR / "descriptive_stats.csv", encoding="utf-8")
-    print(f"\n[save] descriptive_stats.csv → {PLOTS_DIR}/descriptive_stats.csv")
+    print(f"\n[save] {PLOTS_DIR}/descriptive_stats.csv")
 
     # ----- Категориальные счётчики -----
     print("\n" + "─" * 60)
@@ -319,65 +116,42 @@ def main() -> None:
     pd.concat(cat_combined).to_csv(
         PLOTS_DIR / "categorical_counts.csv", index=False, encoding="utf-8"
     )
-    print(f"\n[save] categorical_counts.csv")
+    print(f"\n[save] {PLOTS_DIR}/categorical_counts.csv")
 
-    # ----- Графики -----
-    print("\n" + "─" * 60)
-    print("ГРАФИКИ EDA")
-    print("─" * 60)
-
-    print("[16/21] Гистограммы числовых")
-    plot_numeric_histograms(df)
-
-    print("[17/21] Counts категориальных")
-    plot_categorical_counts(df)
-
-    print("[18/21] Spearman correlation")
-    spearman = plot_spearman_correlation(df)
-
-    print("[19/21] Scatter matrix")
-    plot_scatter_matrix(df)
-
-    print("[20/21] Outliers boxplots")
-    outliers = plot_outliers(df)
-
-    print("[21/21] Price vs features")
-    plot_price_vs_features(df)
-
-    # ----- Корреляция: Pearson + Spearman в один CSV -----
+    # ----- Корреляции -----
     cols = NUMERIC_FEATURES + [TARGET]
-    pearson = df[cols].corr(method="pearson")
-    corr_combined = pd.concat({
-        "pearson":  pearson,
-        "spearman": spearman,
-    }, axis=0)
-    corr_combined.to_csv(PLOTS_DIR / "correlation_matrix.csv", encoding="utf-8")
-    print(f"\n[save] correlation_matrix.csv (Pearson + Spearman)")
+    pearson  = df[cols].corr(method="pearson")
+    spearman = df[cols].corr(method="spearman")
+    pd.concat({"pearson": pearson, "spearman": spearman}, axis=0).to_csv(
+        PLOTS_DIR / "correlation_matrix.csv", encoding="utf-8"
+    )
+    print(f"[save] {PLOTS_DIR}/correlation_matrix.csv (Pearson + Spearman)")
 
-    # ----- Краткое резюме -----
+    # ----- Outliers -----
+    outliers = count_outliers_iqr(df, NUMERIC_FEATURES + [TARGET])
+
+    # ----- Резюме -----
     print("\n" + "=" * 60)
-    print("КРАТКОЕ РЕЗЮМЕ EDA")
+    print("РЕЗЮМЕ")
     print("=" * 60)
 
-    # Топ корреляций с price
     price_corr_p = pearson[TARGET].drop(TARGET).abs().sort_values(ascending=False)
-    print(f"\nТоп-3 признака по |Pearson| с price:")
+    print(f"\nТоп-3 драйвера цены (по |Pearson|):")
     for feat in price_corr_p.head(3).index:
-        print(f"  {feat:20s}: Pearson={pearson.loc[feat, TARGET]:+.3f}, "
+        print(f"  {feat:20s}  Pearson={pearson.loc[feat, TARGET]:+.3f}  "
               f"Spearman={spearman.loc[feat, TARGET]:+.3f}")
 
-    print(f"\nOutliers по IQR (>1.5·IQR от Q1/Q3):")
+    print(f"\nOutliers по IQR:")
     for col, n in outliers.items():
         marker = " ⚠" if n > 50 else ""
-        print(f"  {col:20s}: {n:4d} ({n/len(df)*100:.1f}%){marker}")
+        print(f"  {col:20s}  {n:4d}  ({n/len(df)*100:.1f}%){marker}")
 
-    print(f"\nКатегориальные распределения:")
+    print(f"\nКатегориальные:")
     for col in CATEGORICAL_FEATURES:
         top = df[col].value_counts().head(1)
-        print(f"  {col:12s}: {df[col].nunique()} уникальных, "
-              f"топ: {top.index[0]} ({top.values[0]} = {top.values[0]/len(df)*100:.1f}%)")
+        print(f"  {col:12s}  {df[col].nunique()} уникальных, "
+              f"топ: {top.index[0]} ({top.values[0]/len(df)*100:.1f}%)")
 
-    # ----- Сохраняем JSON-summary -----
     summary = {
         "n_rows":          int(len(df)),
         "n_columns":       int(df.shape[1]),
@@ -396,10 +170,10 @@ def main() -> None:
     summary_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"\n[save] eda_summary.json → {summary_path}")
+    print(f"\n[save] {summary_path}")
 
     print("=" * 60)
-    print(f"EDA ЗАВЕРШЁН — все артефакты в {PLOTS_DIR}/")
+    print("EDA ЗАВЕРШЁН")
     print("=" * 60)
 
 

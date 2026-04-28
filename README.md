@@ -26,8 +26,26 @@ ml-model/
 ├── train.py                         # главный скрипт (Задания 2,3,4,5)
 ├── app.py                           # FastAPI-сервер: API + раздача статики
 ├── theory.md                        # теория (Задания 1, 5, 6)
-├── plots_explanation.md             # объяснение графика elbow
-├── elbow_plot.png                   # генерируется
+├── theory_full.docx                 # расширенная теория (всё в одном файле)
+├── graphs_explanation.md            # пояснения к 10 графикам
+├── plots/                           # графики + статистика
+│   ├── elbow_plot.png               # K=4 (генерируется train.py)
+│   ├── 01_price_distribution.png
+│   ├── 02_correlation_heatmap.png
+│   ├── 03_boxplots_by_category.png
+│   ├── 04_predicted_vs_actual.png
+│   ├── 05_residuals.png
+│   ├── 06_feature_importance.png
+│   ├── 07_overfit_curve.png
+│   ├── 08_clusters_2d.png
+│   ├── 09_confusion_matrix.png
+│   ├── descriptive_stats.csv
+│   ├── categorical_counts.csv
+│   ├── correlation_matrix.csv
+│   ├── eda_summary.json
+│   └── extended_metrics.json
+├── eda.py                           # описательный анализ
+├── make_plots.py                    # генератор графиков
 ├── requirements.txt
 ├── Dockerfile                       # Задание 7
 ├── README.md                        # Задание 8
@@ -85,22 +103,37 @@ python train.py
 ## Описательный анализ + графики
 
 ```bash
-# Описательная статистика, корреляции, гистограммы, scatter matrix
+# Описательная статистика и корреляции (CSV/JSON в plots/)
 python eda.py
 
-# Графики моделей: predicted/actual, residuals, feature importance, кластеры
+# 9 ключевых графиков
 python make_plots.py
 ```
 
-Артефакты в `plots/`:
+**Графики (PNG):**
 
-| Группа | Файлы |
-|--------|-------|
-| EDA | `descriptive_stats.csv`, `categorical_counts.csv`, `correlation_matrix.csv`, `eda_summary.json` |
-| EDA-графики | `16_numeric_histograms.png`, `17_categorical_counts.png`, `18_spearman_correlation.png`, `19_scatter_matrix.png`, `20_outliers_boxplots.png`, `21_price_vs_features.png` |
-| Регрессия | `04_predicted_vs_actual.png`, `05_residuals.png`, `06_qq_plot.png`, `07_feature_importance.png`, `08_lasso_path.png`, `09_learning_curve.png`, `10_validation_curve_alpha.png`, `11_validation_curve_depth.png`, `15_per_segment_metrics.png` |
-| Кластеризация | `12_clusters_2d_pca.png`, `13_clusters_2d_native.png`, `14_confusion_matrix.png` |
-| Корреляции/категории | `01_price_distribution.png`, `02_correlation_heatmap.png`, `03_boxplots_by_category.png` |
+| Файл | Что показывает |
+|------|----------------|
+| `plots/elbow_plot.png` | Inertia + Silhouette → выбор K=4 |
+| `plots/01_price_distribution.png` | Мультимодальность 4 сегментов |
+| `plots/02_correlation_heatmap.png` | Pearson корреляции |
+| `plots/03_boxplots_by_category.png` | Цена по district/material/renovation |
+| `plots/04_predicted_vs_actual.png` | Точность регрессии (главный) |
+| `plots/05_residuals.png` | Анализ остатков |
+| `plots/06_feature_importance.png` | Важности признаков из RF |
+| `plots/07_overfit_curve.png` | Train/val R² по max_depth (Задание 6) |
+| `plots/08_clusters_2d.png` | 4 кластера в осях area × price/m² |
+| `plots/09_confusion_matrix.png` | Cluster Purity 0.987 |
+
+**Дополнительно в `plots/`:**
+
+- `descriptive_stats.csv` — describe() + skew/kurtosis/CV/IQR/range
+- `categorical_counts.csv` — counts + % для district/material/renovation
+- `correlation_matrix.csv` — Pearson + Spearman
+- `eda_summary.json` — JSON-сводка EDA
+- `extended_metrics.json` — Cluster Purity
+
+Полные пояснения к каждому графику: `graphs_explanation.md`.
 
 ---
 

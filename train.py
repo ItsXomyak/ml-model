@@ -38,7 +38,8 @@ MODELS_DIR   = "models"
 PRICE_MODEL  = os.path.join(MODELS_DIR, "price_model.pkl")
 CLUSTER_MODEL = os.path.join(MODELS_DIR, "cluster_model.pkl")
 METRICS_PATH = "metrics.json"
-ELBOW_PLOT   = "elbow_plot.png"
+PLOTS_DIR    = "plots"
+ELBOW_PLOT   = os.path.join(PLOTS_DIR, "elbow_plot.png")
 
 RANDOM_STATE = 42
 
@@ -377,6 +378,7 @@ def train_clustering(df: pd.DataFrame) -> Tuple[Pipeline, Dict[str, Any]]:
     cluster_to_class = {int(cl): names[i] for i, cl in enumerate(sorted_clusters)}
     print(f"[clustering] Маппинг кластеров: {cluster_to_class}")
 
+    os.makedirs(PLOTS_DIR, exist_ok=True)
     save_elbow_plot(K_range, inertias, silhouettes, optimal_k)
 
     # Сохраняем pipeline (scaler + KMeans) единым артефактом
