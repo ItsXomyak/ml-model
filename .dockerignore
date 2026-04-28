@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pkl
+.DS_Store
+.idea
+.vscode
+*.md
+!README.md
+main.go
+LICENSE

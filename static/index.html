@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оценка стоимости квартиры — Астана</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Оценка квартиры в Астане</h1>
+            <p class="subtitle">ML-модель: предсказание цены и определение класса</p>
+            <div id="model-info" class="model-info"></div>
+        </header>
+
+        <form id="apt-form" class="card">
+            <div class="grid">
+                <label>
+                    Площадь (м²)
+                    <input type="number" name="area" min="25" max="200" step="0.1" value="75" required>
+                </label>
+
+                <label>
+                    Комнаты
+                    <input type="number" name="rooms" min="1" max="5" value="3" required>
+                </label>
+
+                <label>
+                    Этаж
+                    <input type="number" name="floor" min="1" max="25" value="8" required>
+                </label>
+
+                <label>
+                    Этажей в доме
+                    <input type="number" name="total_floors" min="5" max="25" value="16" required>
+                </label>
+
+                <label>
+                    Год постройки
+                    <input type="number" name="year_built" min="1960" max="2025" value="2020" required>
+                </label>
+
+                <label>
+                    Расстояние до центра (км)
+                    <input type="number" name="dist_to_center" min="0.5" max="25" step="0.1" value="4.5" required>
+                </label>
+
+                <label>
+                    Район
+                    <select name="district" required>
+                        <option value="Есиль">Есиль</option>
+                        <option value="Алматы">Алматы</option>
+                        <option value="Сарыарка">Сарыарка</option>
+                        <option value="Байконыр">Байконыр</option>
+                        <option value="Нура">Нура</option>
+                    </select>
+                </label>
+
+                <label>
+                    Материал стен
+                    <select name="material" required>
+                        <option value="монолит">монолит</option>
+                        <option value="кирпич">кирпич</option>
+                        <option value="панель">панель</option>
+                    </select>
+                </label>
+
+                <label class="full">
+                    Тип ремонта
+                    <select name="renovation" required>
+                        <option value="без ремонта">без ремонта</option>
+                        <option value="косметический">косметический</option>
+                        <option value="евро" selected>евро</option>
+                        <option value="дизайнерский">дизайнерский</option>
+                    </select>
+                </label>
+            </div>
+
+            <button type="submit" id="submit-btn">Оценить →</button>
+        </form>
+
+        <div id="result" class="result hidden"></div>
+        <div id="error" class="error hidden"></div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
