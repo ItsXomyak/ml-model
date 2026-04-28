@@ -27,8 +27,8 @@ ml-model/
 ├── app.py                           # FastAPI-сервер: API + раздача статики
 ├── theory.md                        # теория (Задания 1, 5, 6)
 ├── theory_full.docx                 # расширенная теория (всё в одном файле)
-├── graphs_explanation.md            # пояснения к 10 графикам
 ├── plots/                           # графики + статистика
+│   ├── graphs_explained.md          # ПОДРОБНЫЕ пояснения каждого графика
 │   ├── elbow_plot.png               # K=4 (генерируется train.py)
 │   ├── 01_price_distribution.png
 │   ├── 02_correlation_heatmap.png
@@ -133,7 +133,7 @@ python make_plots.py
 - `eda_summary.json` — JSON-сводка EDA
 - `extended_metrics.json` — Cluster Purity
 
-Полные пояснения к каждому графику: `graphs_explanation.md`.
+Полные пояснения к каждому графику: `plots/graphs_explained.md`.
 
 ---
 
