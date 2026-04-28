@@ -1,0 +1,43 @@
+{
+  "n_rows": 3000,
+  "n_columns": 10,
+  "missing_total": 0,
+  "duplicates": 0,
+  "outliers": {
+    "area": 0,
+    "rooms": 0,
+    "floor": 10,
+    "total_floors": 0,
+    "year_built": 0,
+    "dist_to_center": 0,
+    "price": 0
+  },
+  "top_pearson_with_price": {
+    "area": 0.9659616310916063,
+    "rooms": 0.7412190036048625,
+    "floor": 0.027211387736779467,
+    "total_floors": 0.011841472149664058,
+    "year_built": 0.06725542112457243,
+    "dist_to_center": -0.9136806134040456
+  },
+  "top_spearman_with_price": {
+    "area": 0.9742167673244567,
+    "rooms": 0.7411055135439247,
+    "floor": 0.02152932610928086,
+    "total_floors": 0.01262958210226127,
+    "year_built": 0.1275153507543154,
+    "dist_to_center": -0.935689566506793
+  },
+  "categorical_unique": {
+    "district": 5,
+    "material": 3,
+    "renovation": 4
+  },
+  "price_range": [
+    15.0,
+    250.0
+  ],
+  "price_mean": 101.35264666666667,
+  "price_median": 70.355,
+  "price_std": 80.75538904957781
+}

@@ -1,0 +1,13 @@
+feature,district,count,percent,material,renovation
+district,Сарыарка,796,26.53,,
+district,Байконыр,736,24.53,,
+district,Алматы,570,19.0,,
+district,Нура,564,18.8,,
+district,Есиль,334,11.13,,
+material,,1077,35.9,кирпич,
+material,,1043,34.77,монолит,
+material,,880,29.33,панель,
+renovation,,1106,36.87,,евро
+renovation,,926,30.87,,косметический
+renovation,,492,16.4,,без ремонта
+renovation,,476,15.87,,дизайнерский

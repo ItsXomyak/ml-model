@@ -82,6 +82,28 @@ python train.py
 
 ---
 
+## Описательный анализ + графики
+
+```bash
+# Описательная статистика, корреляции, гистограммы, scatter matrix
+python eda.py
+
+# Графики моделей: predicted/actual, residuals, feature importance, кластеры
+python make_plots.py
+```
+
+Артефакты в `plots/`:
+
+| Группа | Файлы |
+|--------|-------|
+| EDA | `descriptive_stats.csv`, `categorical_counts.csv`, `correlation_matrix.csv`, `eda_summary.json` |
+| EDA-графики | `16_numeric_histograms.png`, `17_categorical_counts.png`, `18_spearman_correlation.png`, `19_scatter_matrix.png`, `20_outliers_boxplots.png`, `21_price_vs_features.png` |
+| Регрессия | `04_predicted_vs_actual.png`, `05_residuals.png`, `06_qq_plot.png`, `07_feature_importance.png`, `08_lasso_path.png`, `09_learning_curve.png`, `10_validation_curve_alpha.png`, `11_validation_curve_depth.png`, `15_per_segment_metrics.png` |
+| Кластеризация | `12_clusters_2d_pca.png`, `13_clusters_2d_native.png`, `14_confusion_matrix.png` |
+| Корреляции/категории | `01_price_distribution.png`, `02_correlation_heatmap.png`, `03_boxplots_by_category.png` |
+
+---
+
 ## Веб-интерфейс (FastAPI + статика)
 
 Поверх обученной модели крутится FastAPI-сервер с фронтом — форма ввода параметров квартиры → возвращает цену и класс.
